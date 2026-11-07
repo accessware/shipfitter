@@ -4,10 +4,7 @@
 use std::env;
 
 use embed_manifest::{
-	manifest::{
-		ActiveCodePage, DpiAwareness, HeapType, Setting,
-		SupportedOS::Windows10,
-	},
+	manifest::{ActiveCodePage, DpiAwareness, HeapType, Setting, SupportedOS::Windows10},
 	new_manifest,
 };
 use winres::WindowsResource;
