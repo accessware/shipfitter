@@ -8,16 +8,25 @@ use std::{
 
 use crate::{Result, arch_suffix};
 
-/// The profile directory the binary is linked into, such as `target/release`. Build scripts put
-/// generated files there so they sit next to the executable.
+/// The profile directory the binary is linked into, such as `target/release`, or
+/// `target/<triple>/release` for a cross build. Build scripts put generated files there so they
+/// sit next to the executable.
 #[must_use]
 pub fn target_profile_dir() -> Option<PathBuf> {
-	let profile = env::var("PROFILE").ok()?;
-	if let Ok(target_dir) = env::var("CARGO_TARGET_DIR") {
-		return Some(PathBuf::from(target_dir).join(profile));
+	let var = |name| env::var_os(name).map(PathBuf::from);
+	profile_dir_from(&env::var("PROFILE").ok()?, var("OUT_DIR"), var("CARGO_TARGET_DIR"))
+}
+
+/// Found from `OUT_DIR`, `<profile dir>/build/<crate>-<hash>/out`, which is absolute and keeps a
+/// cross build's target triple. `CARGO_TARGET_DIR` is only the fallback: it leaves the triple out,
+/// and a relative one is relative to where Cargo was started, not to the build script.
+fn profile_dir_from(profile: &str, out_dir: Option<PathBuf>, target_dir: Option<PathBuf>) -> Option<PathBuf> {
+	match out_dir {
+		Some(out_dir) => {
+			out_dir.ancestors().find(|dir| dir.file_name().is_some_and(|name| name == profile)).map(Path::to_path_buf)
+		}
+		None => Some(target_dir?.join(profile)),
 	}
-	let out_dir = PathBuf::from(env::var("OUT_DIR").ok()?);
-	out_dir.ancestors().nth(3).map(Path::to_path_buf)
 }
 
 /// [`arch_suffix`] for the architecture being built for.
@@ -97,4 +106,31 @@ pub fn configure_file(template: &Path, output: &Path, replacements: &[(&str, &st
 	}
 	fs::write(output, content)?;
 	Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn the_profile_dir_is_found_from_out_dir() {
+		let target = env::temp_dir().join("target");
+		let out_dir = target.join("release").join("build").join("app-1234").join("out");
+		assert_eq!(profile_dir_from("release", Some(out_dir), None), Some(target.join("release")));
+	}
+
+	#[test]
+	fn a_cross_build_keeps_its_target_triple_over_cargo_target_dir() {
+		let target = env::temp_dir().join("target");
+		let profile = target.join("aarch64-pc-windows-msvc").join("release");
+		let out_dir = profile.join("build").join("app-1234").join("out");
+		assert_eq!(profile_dir_from("release", Some(out_dir), Some(target)), Some(profile));
+	}
+
+	#[test]
+	fn cargo_target_dir_is_the_fallback() {
+		let target = env::temp_dir().join("target");
+		assert_eq!(profile_dir_from("debug", None, Some(target.clone())), Some(target.join("debug")));
+		assert_eq!(profile_dir_from("debug", None, None), None);
+	}
 }
