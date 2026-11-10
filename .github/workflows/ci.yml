@@ -19,7 +19,7 @@ jobs:
       # rustfmt.toml uses nightly-only options. Pinned to Paperback's nightly, since rustfmt's output changes between nightlies.
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly-2026-11-02
+          toolchain: nightly-2026-11-09
           components: rustfmt
       - run: cargo fmt --all --check
   check:
