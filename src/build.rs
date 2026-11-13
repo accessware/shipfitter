@@ -119,6 +119,15 @@ mod tests {
 		assert_eq!(profile_dir_from("release", Some(out_dir), None), Some(target.join("release")));
 	}
 
+	/// Cargo 1.100 nests a build script's `OUT_DIR` one deeper, `build/<crate>/<hash>/out`.
+	#[test]
+	fn the_profile_dir_is_found_from_cargo_1_100s_out_dir() {
+		let target = env::temp_dir().join("target");
+		let profile = target.join("aarch64-apple-darwin").join("release");
+		let out_dir = profile.join("build").join("app").join("1234").join("out");
+		assert_eq!(profile_dir_from("release", Some(out_dir), None), Some(profile));
+	}
+
 	#[test]
 	fn a_cross_build_keeps_its_target_triple_over_cargo_target_dir() {
 		let target = env::temp_dir().join("target");
