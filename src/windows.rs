@@ -35,7 +35,7 @@ pub fn embed_manifest(app_name: &str) -> Result<()> {
 	embed_manifest_with(app_name, ManifestOptions::default())
 }
 
-/// [`embed_manifest`] with `options`.
+/// [`embed_manifest()`] with `options`.
 pub fn embed_manifest_with(app_name: &str, options: ManifestOptions) -> Result<()> {
 	if !targets_windows() {
 		return Ok(());
